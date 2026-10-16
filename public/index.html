@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hikvision Live Stream</title>
+    <link rel="icon" href="data:,">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #121212;
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+        }
+
+        select {
+            padding: 8px 16px;
+            font-size: 16px;
+            border-radius: 4px;
+            background: #222;
+            color: #fff;
+            border: 1px solid #444;
+            cursor: pointer;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-top: 10px;
+            background: #000;
+            border: 2px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+            min-width: 640px;
+            min-height: 360px;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            max-width: 960px;
+            height: auto;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #aaa;
+            font-size: 16px;
+            padding: 20px;
+            z-index: 10;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #007acc;
+            animation: spin 1s linear infinite;
+            margin-bottom: 12px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Hikvision Camera Live Stream</h1>
+
+    <div class="controls">
+        <label for="camera-select">Select Camera: </label>
+        <select id="camera-select">
+            <option value="1" selected>Camera 01</option>
+            <option value="2">Camera 02</option>
+            <option value="3">Camera 03</option>
+            <option value="4">Camera 04</option>
+            <option value="5">Camera 05</option>
+            <option value="6">Camera 06</option>
+        </select>
+    </div>
+
+    <!-- Canvas Wrapper with Overlay -->
+    <div class="canvas-wrapper">
+        <div id="status-overlay" class="overlay">
+            <div id="spinner" class="spinner"></div>
+            <div id="status-text">Connecting to Camera 01...</div>
+        </div>
+        <canvas id="video-canvas"></canvas>
+    </div>
+
+    <script src="/js/index.js"></script>
+    <script>
+        let currentPlayer = null;
+
+        function setStatus(message, isError = false, isLoading = false) {
+            const overlay = document.getElementById('status-overlay');
+            const text = document.getElementById('status-text');
+            const spinner = document.getElementById('spinner');
+
+            text.innerText = message;
+            spinner.style.display = isLoading ? 'block' : 'none';
+            overlay.style.display = message ? 'flex' : 'none';
+            overlay.style.color = isError ? '#ff4d4d' : '#aaa';
+        }
+
+        function loadCamera(camId) {
+            const wrapper = document.querySelector('.canvas-wrapper');
+            if (!wrapper) return;
+
+            setStatus(`Connecting to Camera 0${camId}...`, false, true);
+
+            // Destroy previous player
+            if (currentPlayer) {
+                try {
+                    currentPlayer.destroy();
+                } catch (e) {
+                    console.warn("Player destroy error:", e);
+                }
+                currentPlayer = null;
+            }
+
+            // Remove old canvas and create a fresh one to avoid stale WebGL context
+            const oldCanvas = document.getElementById('video-canvas');
+            if (oldCanvas) oldCanvas.remove();
+
+            const canvas = document.createElement('canvas');
+            canvas.id = 'video-canvas';
+            wrapper.appendChild(canvas);
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const auth = btoa('admin:239633P@');
+            const wsUrl = `${protocol}//${window.location.host}/live/${camId}?auth=${auth}`;
+
+            loadPlayer({
+                url: wsUrl,
+                canvas: canvas,
+                disconnectThreshold: 15000,
+                onSourceEstablished: () => {
+                    console.log(`Stream established for camera ${camId}`);
+                    setStatus('', false, false);
+                }
+            }).then(player => {
+                currentPlayer = player;
+            }).catch(err => {
+                console.error(`Failed to load stream for camera ${camId}:`, err);
+                setStatus(`Failed to connect to Camera 0${camId}. Check RTSP stream availability & credentials.`, true, false);
+            });
+        }
+
+        document.getElementById('camera-select').addEventListener('change', (e) => {
+            loadCamera(e.target.value);
+        });
+
+        // Re-establish connections after Back-Forward Cache
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+
+        // Load Camera 1 on startup
+        loadCamera(1);
+    </script>
+</body>
+
+</html>
