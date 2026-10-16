@@ -47,7 +47,7 @@ app.use(
         contentSecurityPolicy: {
             directives: {
                 defaultSrc: ["'self'", "'unsafe-inline'", "data:", "ws:", "wss:"],
-                scriptSrc: ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", "https://cdn.jsdelivr.net"],
+                scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "'wasm-unsafe-eval'", "https://cdn.jsdelivr.net"],
                 styleSrc: ["'self'", "'unsafe-inline'"],
                 imgSrc: ["'self'", "data:"],
                 connectSrc: ["'self'", "ws:", "wss:", "https://cdn.jsdelivr.net"]
@@ -65,6 +65,16 @@ const { proxy } = require('rtsp-relay')(app);
 // Serve your frontend HTML page from a 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Explicitly expose the rtsp-relay browser bundle with the correct JS MIME type.
+// This avoids the Render/hosted environment serving it as text/plain.
+app.use('/js', express.static(path.join(__dirname, 'node_modules/rtsp-relay/browser'), {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        }
+    }
+}));
+
 // ------------------------------------------------------------
 // Fallback route – serve the SPA entry point (index.html) for any
 // path that isn’t matched by the static middleware. This ensures the
@@ -73,8 +83,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-// Expose rtsp-relay browser client script
-app.use('/js', express.static(path.join(__dirname, 'node_modules/rtsp-relay/browser')));
+
+app.get('/js/index.js', (req, res) => {
+  const filePath = path.join(__dirname, 'node_modules', 'rtsp-relay', 'browser', 'index.js');
+  res.type('application/javascript');
+  res.sendFile(filePath);
+});
 
 // Dynamic WebSocket endpoints for Camera 01 to Camera 06
 const dvrHost = process.env.DVR_HOST || '197.36.66.103';
