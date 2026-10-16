@@ -42,17 +42,12 @@ function isAuthorized(req) {
 // Optional: expose a quick health‑check endpoint (no auth required)
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
+// Disable CSP here because JSMpeg and the rtsp-relay browser client require
+// runtime evaluation. A strict CSP causes browser extensions or the viewer to
+// block the player script even when the stream itself is valid.
 app.use(
     helmet({
-        contentSecurityPolicy: {
-            directives: {
-                defaultSrc: ["'self'", "'unsafe-inline'", "data:", "ws:", "wss:"],
-                scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "'wasm-unsafe-eval'", "https://cdn.jsdelivr.net"],
-                styleSrc: ["'self'", "'unsafe-inline'"],
-                imgSrc: ["'self'", "data:"],
-                connectSrc: ["'self'", "ws:", "wss:", "https://cdn.jsdelivr.net"]
-            }
-        },
+        contentSecurityPolicy: false,
         crossOriginEmbedderPolicy: false
     })
 );
