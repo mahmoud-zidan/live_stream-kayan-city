@@ -23,14 +23,16 @@ http://localhost:3500
 
 This app runs a long-lived Node server, opens WebSocket routes, and launches FFmpeg for each RTSP stream. That is not a good fit for Vercel's serverless hosting model.
 
-Use one of these for deployment instead:
+The project now includes a Vercel deployment export (`server.js` and `vercel.json`) so it can be deployed as a serverless-friendly shell, but the actual RTSP camera stream still requires a persistent Node runtime or a custom host with long-lived WebSockets.
+
+Use one of these for the live camera feed instead:
 
 - Render
 - Railway
 - a VPS / VM
 - a custom Node host with a public IP and port open
 
-Vercel can still host the GitHub repo, but the live RTSP relay should be deployed to a Node runtime that stays awake and supports long-lived WebSockets.
+Vercel can still host the GitHub repo or a frontend shell, but the live RTSP relay should be deployed to a Node runtime that stays awake and supports long-lived WebSockets.
 
 ## Environment variables
 

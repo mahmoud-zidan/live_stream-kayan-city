@@ -152,4 +152,11 @@ function startServer(port) {
     });
 }
 
-startServer(PORT);
+if (process.env.VERCEL || process.env.VERCEL_ENV) {
+    console.log('[VERCEL] Detected Vercel environment. Exporting the Express app for serverless deployment.');
+    module.exports = app;
+} else if (require.main === module) {
+    startServer(PORT);
+} else {
+    module.exports = app;
+}
